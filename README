@@ -1,4 +1,5 @@
-The code operates in the following sequence:
+
+The code "Credit Card Defaults" operates in the following sequence:
 
 Convert categorical variables (e.g., SEX, EDUCATION, PAY_0 to PAY_6) into factors.
 Scale numeric predictors (e.g., credit limits, payment history).
