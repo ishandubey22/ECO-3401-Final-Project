@@ -1,0 +1,33 @@
+The code operates in the following sequence:
+
+Convert categorical variables (e.g., SEX, EDUCATION, PAY_0 to PAY_6) into factors.
+Scale numeric predictors (e.g., credit limits, payment history).
+
+Why we scale here:
+KNN and neural networks rely on distance metrics (e.g., Euclidean distance), gradient-based optimization respectively.
+If one feature has a larger numeric range than others (e.g., credit limit in thousands vs. age in tens), it will dominate the distance or learning process.
+Scaling puts all numeric variables on a comparable scale, typically with mean = 0 and standard deviation = 1 (standardization), which helps the model learn more effectively.
+For models like neural networks, scaling ensures faster and more stable convergence during training since the gradients become more balanced across layers.
+
+Split data into training (70%) and test (30%) sets.
+
+Training the following models:
+K-Nearest Neighbors (KNN)
+Logistic Regression
+Linear Discriminant Analysis (LDA)
+Naive Bayes
+Neural Network (via caret tuning)
+Decision Tree (rpart)
+
+ROC Curve: The ROC curve (Receiver Operating Characteristic curve) shows how well a model separates positive and negative classes by plotting the true positive rate against the
+false positive rate at different thresholds. A model with a curve that hugs the top-left corner performs better, while a diagonal line means the model is no better than trying to 
+randomly guess. The area under the curve (AUC) summarizes this performance—closer to 1 means strong predictive ability.
+
+We generate test-set predictions from all models.
+Computes the following evaluation metrics for each:
+AUC (Area Under the ROC Curve)
+Calibration R² (based on smoothed observed probabilities)
+Calibration Intercept & Slope
+Area Ratio (lift-based metric comparing model vs. perfect vs. random) - This needs work, currently not functional.
+
+Smoothing Function - From the paper to locally smooth true default outcomes for evaluating probability calibration.
