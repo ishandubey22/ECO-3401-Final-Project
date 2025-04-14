@@ -89,34 +89,46 @@ results <- data.frame(Model = character(),
                       R2 = numeric(),
                       Intercept = numeric(),
                       Slope = numeric(),
-                      AreaRatio = numeric())
+                      AreaRatio = numeric(),
+                      ErrorRate = numeric())
 
 # area ratio function
 calculate_area_ratio <- function(pred, actual) {
-  actual <- factor(actual, levels = c(0, 1))
+  # combine predictions and actuals
+  df <- data.frame(pred = pred, actual = actual)
+  df <- df[order(-df$pred), ]  # sort by descending prediction
   
-
-  lift_obj <- lift(actual ~ pred, data = data.frame(pred = pred, actual = actual))
-
-  df <- lift_obj$data
-  x <- df$cum.pop
-  y_model <- df$CumEvent
-  y_baseline <- df$cum.rn
+  total_pop <- nrow(df)
+  total_pos <- sum(df$actual)
   
-  area_model <- sum(diff(x) * (head(y_model, -1) + tail(y_model, -1)) / 2)
-  area_baseline <- sum(diff(x) * (head(y_baseline, -1) + tail(y_baseline, -1)) / 2)
+  # model curve: cumulative sum of actual positives
+  df$cum_actual <- cumsum(df$actual)
+  model_curve <- df$cum_actual / total_pos
   
-  total_pop <- length(actual)
-  total_pos <- sum(actual == 1)
-  perfect_y <- c(rep(1, total_pos), rep(0, total_pop - total_pos))
-  perfect_y_cum <- cumsum(perfect_y) / total_pos
-  perfect_x <- seq(0, 1, length.out = total_pop)
+  # baseline: diagonal from 0 to 1
+  baseline_curve <- seq(1, total_pop) / total_pop
   
-  area_perfect <- sum(diff(perfect_x) * (head(perfect_y_cum, -1) + tail(perfect_y_cum, -1)) / 2)
+  # best curve: sort actuals to get perfect ranking
+  df_best <- df[order(-df$actual), ]
+  df_best$cum_best <- cumsum(df_best$actual)
+  best_curve <- df_best$cum_best / total_pos
   
-  if (area_perfect == area_baseline) return(NA)
-  (area_model - area_baseline) / (area_perfect - area_baseline)
+  # normalize x-axis
+  x <- seq(1, total_pop) / total_pop
+  
+  # compute areas using trapezoidal rule
+  trapz <- function(x, y) {
+    sum(diff(x) * (head(y, -1) + tail(y, -1)) / 2)
+  }
+  
+  area_model <- trapz(x, model_curve)
+  area_baseline <- trapz(x, baseline_curve)
+  area_best <- trapz(x, best_curve)
+  
+  if ((area_best - area_baseline) == 0) return(NA)
+  (area_model - area_baseline) / (area_best - area_baseline)
 }
+
 
 # loop through each model and collect stats
 for (model_name in names(models)) {
@@ -130,14 +142,53 @@ for (model_name in names(models)) {
   # area ratio
   area_ratio <- calculate_area_ratio(models[[model_name]], test_final$Default_Payment)
   
+  # Convert predicted probabilities to class labels using threshold 0.5
+  pred_labels <- ifelse(models[[model_name]] >= 0.5, 1, 0)
+  
+  # Calculate error rate
+  error_rate <- mean(pred_labels != test_final$Default_Payment)
+  
   results <- rbind(results, data.frame(
     Model = model_name,
     AUC = round(auc_score, 3),
     R2 = round(summary(fit)$r.squared, 3),
     Intercept = round(coef(fit)[1], 4),
     Slope = round(coef(fit)[2], 4),
-    AreaRatio = round(area_ratio, 3)
-  ))
+    AreaRatio = round(area_ratio, 3),
+    ErrorRate = round(error_rate, 3)
+  ))}
+
+
+plot_lift_curve <- function(pred, actual, model_name = "Model") {
+  df <- data.frame(pred = pred, actual = actual)
+  df <- df[order(-df$pred), ]
+  
+  total_pop <- nrow(df)
+  total_pos <- sum(df$actual)
+  
+  df$cum_model <- cumsum(df$actual) / total_pos
+  baseline_curve <- seq(1, total_pop) / total_pop
+  
+  df_best <- df[order(-df$actual), ]
+  df_best$cum_best <- cumsum(df_best$actual) / total_pos
+  
+  x_axis <- seq(1, total_pop) / total_pop
+  
+  plot(x_axis, df$cum_model, type = "l", lwd = 4, col = "black",
+       xlab = "Proportion of Population",
+       ylab = "Cumulative Proportion of Defaulters",
+       main = paste("Lift Chart -", model_name),
+       ylim = c(0, 1))
+  
+  lines(x_axis, baseline_curve, col = "black", lty = 2, lwd = 4)
+  lines(x_axis, df_best$cum_best, col = "black", lty = 3, lwd = 4)
+  
+  legend("bottomright", legend = c("Model", "Random (Baseline)", "Best (Perfect Model)"),
+         col = c("black", "black", "black"), lty = c(1, 2, 3), lwd = 4)
 }
 
+plot_lift_curve(models$ANN, test_final$Default_Payment, model_name = "ANN")
+
 print(results)
+
+#random forest and GBDT to do
