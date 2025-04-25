@@ -1,6 +1,6 @@
 The Excel Sheet - "deafault of credit cards.xls:  is the dataset that was used in the paper and the one we use in our R code as well.
 
-The code "Credit Card Defaults" operates in the following sequence:
+The code operates in the following sequence:
 
 Convert categorical variables (e.g., SEX, EDUCATION, PAY_0 to PAY_6) into factors.
 Scale numeric predictors (e.g., credit limits, payment history).
@@ -11,7 +11,7 @@ If one feature has a larger numeric range than others (e.g., credit limit in tho
 Scaling puts all numeric variables on a comparable scale, typically with mean = 0 and standard deviation = 1 (standardization), which helps the model learn more effectively.
 For models like neural networks, scaling ensures faster and more stable convergence during training since the gradients become more balanced across layers.
 
-Split data into training (70%) and test (30%) sets.
+Split data into training (70%) and test (30%) sets. For K-fold Cross validation a loop with K from 5 to 15. This code will take an hour to run (at least as per our machines).
 
 Training the following models:
 K-Nearest Neighbors (KNN)
@@ -20,6 +20,7 @@ Linear Discriminant Analysis (LDA)
 Naive Bayes
 Neural Network (via caret tuning)
 Decision Tree (rpart)
+Random Forest
 Xgboost decision trees
 
 ROC Curve: The ROC curve (Receiver Operating Characteristic curve) shows how well a model separates positive and negative classes by plotting the true positive rate against the
@@ -33,8 +34,9 @@ and compare against our model.
 We generate test-set predictions from all models.
 Computes the following evaluation metrics for each:
 AUC (Area Under the ROC Curve)
-Calibration R² (based on smoothed observed probabilities)
+Calibration R² (based on smoothed observed probabilities, namely, SSM)
+
 Calibration Intercept & Slope
-Area Ratio (lift-based metric comparing model vs. perfect vs. random) - This needs work, currently not functional.
+Area Ratio (lift-based metric comparing model vs. perfect vs. random baseline) - 
 
 Smoothing Function - From the paper to locally smooth true default outcomes for evaluating probability calibration.
